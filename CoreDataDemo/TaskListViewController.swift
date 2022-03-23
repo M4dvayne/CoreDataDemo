@@ -16,7 +16,8 @@ class TaskListViewController: UITableViewController {
     private let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     private let cellID = "task"
     private var taskList: [Task] = []
-
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
@@ -24,7 +25,7 @@ class TaskListViewController: UITableViewController {
         setupNavigationBar()
         fetchData()
     }
-
+    
     private func setupNavigationBar() {
         title = "Task List"
         navigationController?.navigationBar.prefersLargeTitles = true
@@ -56,9 +57,10 @@ class TaskListViewController: UITableViewController {
         showAlert(with: "New Task", and: "What do you want to do?")
     }
     
+    
+    
     private func fetchData() {
         let fetchRequest = Task.fetchRequest()
-        
         do {
             taskList = try context.fetch(fetchRequest)
         } catch let error {
@@ -80,6 +82,8 @@ class TaskListViewController: UITableViewController {
         }
         present(alert, animated: true)
     }
+    
+    
     
     private func save(_ taskName: String) {
         guard let entityDescription = NSEntityDescription.entity(forEntityName: "Task", in: context) else { return }
@@ -114,7 +118,63 @@ extension TaskListViewController {
         cell.contentConfiguration = content
         return cell
     }
+    
+    
+    //удаление строки
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        let task = taskList[indexPath.row]
+        if editingStyle == .delete {
+            context.delete(task)
+            tableView.reloadData()
+        }
+        
+        do {
+            try context.save()
+            let cellIndex = IndexPath(row: taskList.endIndex, section: 0)
+            tableView.deleteRows(at: [cellIndex], with: .automatic)
+        } catch let error as NSError {
+            print(error.localizedDescription)
+        }
+    }
+    //Редактирование строки
+    
+    func editTask(task: Task, newValue: String) {
+        task.title = newValue
+        taskList.append(task)
+    }
+    
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let task = taskList[indexPath.row]
+        showAlertForEditing(title: "Please edit your task", message: "Save to confirm changes!", task: task)
+    }
+    private func showAlertForEditing(title: String, message: String, task: Task) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let saveAction = UIAlertAction(title: "Save", style: .default) { _ in
+            guard let editedTF = alert.textFields?.first?.text else {return}
+            self.editTask(task: task, newValue: editedTF)
+            self.reloadData()
+            
+            if self.context.hasChanges {
+                do {
+                    try self.context.save()
+                } catch let error {
+                    print(error)
+                }
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
+        alert.addAction(saveAction)
+        alert.addAction(cancelAction)
+        alert.addTextField { currentText in
+            currentText.text = task.title
+        }
+        present(alert, animated: true)
+    }
 }
+
+
+
 
 // MARK: - TaskViewControllerDelegate
 extension TaskListViewController: TaskViewControllerDelegate {
@@ -123,3 +183,16 @@ extension TaskListViewController: TaskViewControllerDelegate {
         tableView.reloadData()
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
